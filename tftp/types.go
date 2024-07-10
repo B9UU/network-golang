@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"io"
 	"strings"
 )
 
@@ -15,11 +16,11 @@ const (
 type OpCode uint16
 
 const (
-	OpRRQ OpCode = iota + 1
+	OpRRQ OpCode = iota + 1 // Read Request Code
 	_
-	OpData
-	OpAck
-	OpErr
+	OpData // Data code
+	OpAck  // Acknolegment code
+	OpErr  // Err code
 )
 
 type ErrCode uint16
@@ -40,7 +41,12 @@ type ReadReq struct {
 	Mode     string
 }
 
-// Writes the request packet structure
+type Data struct {
+	Block   uint16    // Block number for serialization by the client
+	Payload io.Reader // Data payload to be serialized
+}
+
+// Creates the request packet structure
 // 2 bytes - opCode | n bytes - filename | 1 byte - 0 | n byte - mode | 1 byte - 0
 //
 //	WARNING:   I don't we shoud add 4 bytes for OpCode
@@ -111,3 +117,68 @@ func (q *ReadReq) UnmarshalBinary(p []byte) error {
 	}
 	return nil
 }
+
+// creates the data packet structur
+// 2 bytes - opCode | 2 bytes - block number | n byte - payload
+func (d *Data) MarshalBinary() ([]byte, error) {
+	b := new(bytes.Buffer)
+	b.Grow(DatagramSize)
+	d.Block++
+
+	err := binary.Write(b, binary.BigEndian, OpData)
+	if err != nil {
+		return nil, err
+	}
+	err = binary.Write(b, binary.BigEndian, d.Block)
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.CopyN(b, d.Payload, BlockSize)
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
+// reads the data packet structur
+// 2 bytes - opCode | 2 bytes - block number | n byte - payload
+func (d *Data) UnmarshalBinary(p []byte) error {
+	if l := len(p); l < 4 || l > DatagramSize {
+		return errors.New("Invalid OpData")
+	}
+
+	var code OpCode
+	err := binary.Read(bytes.NewReader(p[:2]), binary.BigEndian, &code)
+	if err != nil {
+		return errors.New("Invalid OpData")
+	}
+	err = binary.Read(bytes.NewReader(p[2:4]), binary.BigEndian, &d.Block)
+	if err != nil {
+		return errors.New("Invalid OpData")
+	}
+	d.Payload = bytes.NewBuffer(p[4:])
+
+	return nil
+
+}
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//

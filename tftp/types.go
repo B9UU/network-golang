@@ -228,9 +228,24 @@ func (e ErrReq) MarshalBinary() ([]byte, error) {
 }
 
 func (e *ErrReq) UnmarshalBinary(p []byte) error {
-	r := bytes.NewReader(p)
+	r := bytes.NewBuffer(p)
 	var code OpCode
-	binary.Read(r[:2], binary.BigEndian, &code)
+	err := binary.Read(r, binary.BigEndian, &code)
+	if err != nil {
+		return err
+	}
+	if code != OpErr {
+		return errors.New("invalid error")
+	}
+	err = binary.Read(r, binary.BigEndian, &e.Error)
+	if err != nil {
+		return err
+	}
+	e.Message, err = r.ReadString(0)
+	if err != nil {
+		return nil
+	}
+	e.Message = strings.TrimRight(e.Message, "\x00")
 	return nil
 }
 

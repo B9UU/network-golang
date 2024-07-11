@@ -47,6 +47,13 @@ type Data struct {
 }
 
 type Ack uint16 // representing the block number
+
+// Error packet
+type ErrReq struct {
+	Error   ErrCode
+	Message string
+}
+
 // Creates the request packet structure
 // 2 bytes - opCode | n bytes - filename | 1 byte - 0 | n byte - mode | 1 byte - 0
 //
@@ -158,7 +165,6 @@ func (d *Data) UnmarshalBinary(p []byte) error {
 		return errors.New("Invalid OpData")
 	}
 	d.Payload = bytes.NewBuffer(p[4:])
-
 	return nil
 }
 
@@ -195,6 +201,37 @@ func (a *Ack) UnmarshalBinary(p []byte) error {
 	return binary.Read(r, binary.BigEndian, a)
 }
 
+// writes the Error packet
+// 2 bytes - OpCode | 2 bytes - Err Code | n bytes - Message string | 1 byte - null
+func (e ErrReq) MarshalBinary() ([]byte, error) {
+	cap := 2 + 2 + len(e.Message) + 1 // buffer size
+	b := new(bytes.Buffer)            // make the buffer
+	b.Grow(cap)                       // grow the buffer
+
+	err := binary.Write(b, binary.BigEndian, OpErr) // write opError
+	if err != nil {
+		return nil, err
+	}
+	err = binary.Write(b, binary.BigEndian, e.Error) // write error code
+	if err != nil {
+		return nil, err
+	}
+	_, err = b.WriteString(e.Message) // write the error message to the buffer
+	if err != nil {
+		return nil, err
+	}
+	err = b.WriteByte(0) // write one byte "0"/null to the buffer
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
+func (e *ErrReq) UnmarshalBinary(p []byte) error {
+	r := bytes.NewReader(p)
+	var code OpCode
+	binary.Read(r[:2], binary.BigEndian, &code)
+	return nil
 }
 
 //

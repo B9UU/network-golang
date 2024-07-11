@@ -46,6 +46,7 @@ type Data struct {
 	Payload io.Reader // Data payload to be serialized
 }
 
+type Ack uint16 // representing the block number
 // Creates the request packet structure
 // 2 bytes - opCode | n bytes - filename | 1 byte - 0 | n byte - mode | 1 byte - 0
 //
@@ -159,6 +160,40 @@ func (d *Data) UnmarshalBinary(p []byte) error {
 	d.Payload = bytes.NewBuffer(p[4:])
 
 	return nil
+}
+
+// writes the achnowledgment packet
+// 2 bytes - OpCode | 2 bytes - block number
+func (a Ack) MarchalBinary() ([]byte, error) {
+	cap := 2 + 2 // opcode + block number
+	b := new(bytes.Buffer)
+	b.Grow(cap)
+
+	err := binary.Write(b, binary.BigEndian, OpAck)
+	if err != nil {
+		return nil, err
+	}
+	err = binary.Write(b, binary.BigEndian, a)
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
+// reads the achnowledgment packet
+// 2 bytes - OpCode | 2 bytes - block number
+func (a *Ack) UnmarshalBinary(p []byte) error {
+	r := bytes.NewReader(p)
+	var code OpCode
+	err := binary.Read(r, binary.BigEndian, &code)
+	if err != nil {
+		return nil
+	}
+	if code != OpAck {
+		return errors.New("Invalid ack")
+	}
+	return binary.Read(r, binary.BigEndian, a)
+}
 
 }
 

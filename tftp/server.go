@@ -61,7 +61,6 @@ func (s *Server) Serve(conn net.PacketConn) error {
 		}
 		go s.handle(addr.String(), rrq)
 	}
-	return nil
 }
 
 func (s *Server) handle(clientAddr string, rrq ReadReq) {
@@ -91,7 +90,7 @@ NEXTPACKET:
 		// preparing the packet before sending it
 		data, err := dataPkt.MarshalBinary()
 		if err != nil {
-			log.Printf("[%s] preparing data packet: %v", clientAddr, err)
+			log.Printf("[%s] preparing --data packet: %v", clientAddr, err)
 			return
 		}
 		// a label for continue to label since we are doing nested loops

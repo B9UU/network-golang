@@ -142,7 +142,7 @@ func (d *Data) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	_, err = io.CopyN(b, d.Payload, BlockSize)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return nil, err
 	}
 	return b.Bytes(), nil
@@ -170,7 +170,7 @@ func (d *Data) UnmarshalBinary(p []byte) error {
 
 // writes the achnowledgment packet
 // 2 bytes - OpCode | 2 bytes - block number
-func (a Ack) MarchalBinary() ([]byte, error) {
+func (a Ack) MarshalBinary() ([]byte, error) {
 	cap := 2 + 2 // opcode + block number
 	b := new(bytes.Buffer)
 	b.Grow(cap)

@@ -21,7 +21,7 @@ func init() {
 	}
 }
 
-func main() {
+func ping() {
 	flag.Parse()
 	if flag.NArg() != 1 {
 		fmt.Print("host:port is required\n\n")
